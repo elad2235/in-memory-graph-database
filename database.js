@@ -16,16 +16,19 @@ const E = [
     [7, 15],
 ];
 
-const findParents = (vertices) =>
-    E.reduce(
-        (acc, [parent, child]) =>
-            vertices.includes(child) ? acc.concat(parent) : acc,
-        []
-    );
+const getParents = function (vertices) {
+    return E.reduce(
+        function (acc, v) {
+            return ~vertices.indexOf(v[1]) ? acc.concat(v[0]) : acc
+        }, []
+    )
+}
 
-const findChildren = (vertices) =>
-    E.reduce(
-        (acc, [parent, child]) => vertices.include(parent) ? acc.concat(child) : acc,
-        []
-    );
 
+const getChilds = function (vertices) {
+    return E.reduce(
+        function (acc, v) {
+            return ~vertices.indexOf(v[0]) ? acc.concat(v[1]) : acc
+        }, []
+    )
+}
