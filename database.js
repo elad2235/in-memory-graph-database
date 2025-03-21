@@ -58,3 +58,30 @@ Dagoba.error = function (e) {
     console.error(e);
     return false;
 }
+
+
+Dagoba.Q = {};
+Dagoba.query = function (graph) {
+    let query = Object.create(Dagoba.Q)
+
+    query.graph = graph;
+    query.state = [];
+    query.program = [];
+    query.gremlins = [];
+
+    return query;
+}
+
+// adds new step to the query
+Dagoba.Q.add = function (pipetype, args) {
+    let step = [pipetype, args];
+    this.program.push(step);
+    return this;
+}
+
+Dagoba.G.v = function () {
+    let query = Dagoba.query(this);
+    query.add('vertex', [].slice.call(arguments))
+    return query;
+}
+
