@@ -135,3 +135,152 @@ Dagoba.simpleTraversal = function (dir) {
         return Dagoba.gotoVertex(state.gremlin, vertex);
     }
 }
+
+Dagoba.addPipetype('property', function (graph, args, gremlin, state) {
+    if (!gremlin) {
+        return 'pull';
+    }
+    gremlin.result = gremlin.vertex[args[0]];
+    return gremlin.result == null ? false : gremlin;
+})
+
+Dagoba.addPipetype('unique', function (graph, args, gremlin, state) {
+    if (!gremlin) {
+        return 'pull';
+    }
+    if (state[gremlin.vertex._id]) return 'pull';
+    state[gremlin.vertex._id] = true;
+    return gremlin;
+})
+
+Dagoba.addPipetype('filter', function (graph, args, gremlin, state) {
+    if (!gremlin) {
+        return 'pull';
+    }
+    if (typeof args[0] == 'object') {
+        return Dagoba.objectFilter(gremlin.vertex, args[0]) ? gremlin : 'pull';
+    }
+
+    if (typeof args[0] != 'function') {
+        Dagoba.error('Filter is not a function: ' + args[0]);
+        return gremlin;
+    }
+
+    if (!args[0](gremlin.vertex, gremlin)) return 'pull';
+
+    return gremlin;
+})
+
+Dagoba.addPipetype('take', function (graph, args, gremlin, state) {
+    state.taken = state.taken || 0;
+
+    if (state.taken == args[0]) {
+        state.taken = 0;
+        return 'done'
+    }
+
+    if (!gremlin) return 'pull';
+
+    state.taken++;
+    return gremlin;
+})
+
+
+Dagoba.addPipetype('as', function (graph, args, gremlin, state) {
+    if (!gremlin) {
+        return 'pull';
+    }
+
+    gremlin.state.as = gremlin.state.as || {};
+    gremlin.state.as[args[0]] = gremlin.vertex;
+    return gremlin;
+})
+
+Dagoba.addPipetype('merge', function (graph, args, gremlin, state) {
+    if (!state.vertices && !gremlin) {
+        return 'pull';
+    }
+
+    if (!state.vertices || !state.vertices.length) {
+        let obj = (gremlin.state || {}).as || {};
+        state.vertices = args.map(function (id) { return obj[id] }).filter(Boolean);
+    }
+
+    if (!state.vertices.length) {
+        return 'pull';
+    }
+
+    let vertex = state.vertices.pop();
+    return Dagoba.makeGremlin(vertex, gremlin.state);
+})
+
+Dagoba.addPipetype('except', function (graph, args, gremlin, state) {
+    if (!gremlin) {
+        return 'pull';
+    }
+    if (gremlin.vertex == gremlin.state.as[args[0]]) {
+        return 'pull';
+    }
+    return gremlin;
+})
+
+Dagoba.addPipetype('back', function (graph, args, gremlin, state) {
+    if (!gremlin) {
+        return 'pull';
+    }
+
+    return Dagoba.gotoVertex(gremlin, gremlin.state.as[args[0]]);
+})
+
+Dagoba.makeGremlin = function (vertex, state) {
+    return { vertex: vertex, state: state || {} };
+}
+
+Dagoba.gotoVertex = function (gremlin, vertex) {
+    return Dagoba.makeGremlin(vertex, gremlin.state)
+}
+
+Dagoba.G.findVertices = function (args) {
+    if (typeof args[0] == 'object') {
+        return this.searchVertices(args[0]);
+    } else if (args.length == 0) {
+        return this.vertices.slice();
+    }
+    return this.findVerticesByIds(args);
+}
+
+
+Dagoba.G.findVertexByIds = function (ids) {
+    if (ids.length == 1) {
+        let maybeVertex = this.findVertexById(ids[0]);
+        return maybeVertex ? [maybeVertex] : [];
+    }
+    return ids.map(this.findVertexById.bind(this)).filter(Boolean);
+}
+
+Dagoba.G.findVertexById = function (id) {
+    return this.vertexIndex[id];
+}
+
+Dagoba.G.searchVertices = function (filter) {
+    return this.vertices.filter(function (v) {
+        return Dagoba.objectFilter(v, filter);
+    })
+}
+
+Dagoba.filterEdges = function (filter) {
+    return function (edge) {
+        if (!filter) {
+            return true;
+        }
+
+        if (typeof filter == 'string') {
+            return edge._label == filter;
+        }
+
+        if (Array.isArray(filter)) {
+            return !!~filter.indexOf(edge._label);
+        }
+        return Dagoba.objectFilter(edge, filter);
+    }
+}
