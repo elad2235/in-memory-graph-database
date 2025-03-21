@@ -284,3 +284,12 @@ Dagoba.filterEdges = function (filter) {
         return Dagoba.objectFilter(edge, filter);
     }
 }
+
+Dagoba.objectFilter = function (thing, filter) {
+    for (var key in filter) {
+        if (thing[key] !== filter[key]) {
+            return false;
+        }
+    }
+    return true;
+}
