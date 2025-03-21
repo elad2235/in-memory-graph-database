@@ -1,34 +1,60 @@
-const V = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-const E = [
-    [1, 2],
-    [1, 3],
-    [2, 4],
-    [2, 5],
-    [3, 6],
-    [3, 7],
-    [4, 8],
-    [4, 9],
-    [5, 10],
-    [5, 11],
-    [6, 12],
-    [6, 13],
-    [7, 14],
-    [7, 15],
-];
+// Namespace
+Dagoba = {};
 
-const getParents = function (vertices) {
-    return E.reduce(
-        function (acc, v) {
-            return ~vertices.indexOf(v[1]) ? acc.concat(v[0]) : acc
-        }, []
-    )
+Dagoba.G = {};
+
+Dagoba.graph = function (V, E) {
+    let graph = Object.create(Dagoba.G);
+
+    graph.edges = [];
+    graph.vertices = [];
+    graph.vertexIndex = {};
+    graph.autoid = 1;
+    if (!Array.isArray(V) || !Array.isArray(E))
+        return Dagoba.error("V And E should be an arrays");
+    graph.addVertices(V);
+    graph.addEdges(E);
+    return graph;
+};
+
+Dagoba.G.addVertices = function (v) {
+    v.forEach(this.addVertex.bind(this));
+};
+Dagoba.G.addEdges = function (e) {
+    e.forEach(this.addEdges.bind(this));
+};
+
+
+Dagoba.G.addVertex = function (v) {
+    if (!v._id) {
+        v._id = this.autoid++;
+    } else if (this.findVertexById(vertex._id)) {
+        return Dagoba.error('A vertex with that ID already exists');
+    }
+
+    this.vertices.push(v);
+    this.vertexIndex[v._id] = v;
+    v._out = [];
+    v._in = [];
+    return v._id;
 }
 
 
-const getChilds = function (vertices) {
-    return E.reduce(
-        function (acc, v) {
-            return ~vertices.indexOf(v[0]) ? acc.concat(v[1]) : acc
-        }, []
-    )
+Dagoba.G.addEdge = function (e) {
+    e._in = this.findVertexById(e._in);
+    e._out = this.findVertexById(e._out);
+
+    if (!e._in || !e._out) {
+        return Dagoba.error("That edge's " + (e._in ? 'out' : 'in')
+            + " vertex wasn't found")
+    }
+
+    e._out._out.push(e);
+    e._in._in(e);
+    this.edges.push(e);
+}
+
+Dagoba.error = function (e) {
+    console.error(e);
+    return false;
 }
